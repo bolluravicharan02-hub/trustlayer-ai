@@ -43,7 +43,22 @@ export const RegisterPage: React.FC = () => {
       });
       navigate('/app');
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Registration failed. Please check your details.');
+      const status = err.response?.status;
+      const dataMsg =
+        err.response?.data?.error?.message ||
+        err.response?.data?.message ||
+        (typeof err.response?.data === 'string' ? err.response.data : '');
+      const is404 = status === 404 || dataMsg.includes('could not be found') || dataMsg.includes('Not Found');
+
+      if (is404) {
+        setError('Backend API service not reachable (404 Not Found). Please verify that your Render backend is running.');
+      } else if (dataMsg) {
+        setError(dataMsg);
+      } else if (err.message && !err.response) {
+        setError(`Network connection failed: ${err.message}. Backend might be starting up.`);
+      } else {
+        setError('Registration failed. Please check your details.');
+      }
     } finally {
       setIsLoading(false);
     }

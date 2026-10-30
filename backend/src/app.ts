@@ -1,6 +1,7 @@
 import express, { Express } from 'express';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 import cors from 'cors';
 import helmet from 'helmet';
 import session from 'express-session';
@@ -41,8 +42,15 @@ export function createApp(): Express {
   // CORS Configuration
   app.use(cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl) or if origin is allowed
-      if (!origin || env.ALLOWED_ORIGINS.includes(origin) || env.NODE_ENV === 'development') {
+      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
+      // or if origin is explicitly allowed or matches preview / deployment hosts (*.onrender.com, *.vercel.app)
+      const isAllowed =
+        !origin ||
+        env.ALLOWED_ORIGINS.includes(origin) ||
+        env.NODE_ENV === 'development' ||
+        (typeof origin === 'string' && (origin.endsWith('.onrender.com') || origin.endsWith('.vercel.app')));
+
+      if (isAllowed) {
         callback(null, true);
       } else {
         callback(new Error(`Origin ${origin} not allowed by CORS`));
@@ -100,7 +108,7 @@ export function createApp(): Express {
   // CSRF Protection on state-changing requests
   app.use(verifyCsrf);
 
-  // Mount API Endpoints under /api/v1
+  // Mount API Endpoints under env.API_PREFIX (e.g. /api/v1) and fallback root (/)
   const apiRouter = express.Router();
 
   apiRouter.use(healthRouter);
@@ -115,18 +123,65 @@ export function createApp(): Express {
   apiRouter.use(reportsRouter);
   apiRouter.use(dashboardRouter);
 
+  // Mount at configured prefix (/api/v1)
   app.use(env.API_PREFIX, apiRouter);
 
+  // Also mount at root (/) so /auth/login, /health, etc. resolve directly
+  // regardless of whether the frontend passes or omits /api/v1
+  if (env.API_PREFIX !== '/') {
+    app.use(apiRouter);
+  }
+
+  // Explicit structured JSON 404 for unmatched API requests so client never receives HTML error pages
+  app.use((req, res, next) => {
+    const isApiRequest =
+      req.path.startsWith('/api') ||
+      req.path.startsWith('/auth') ||
+      req.path.startsWith('/health') ||
+      req.path.startsWith('/events') ||
+      req.path.startsWith('/alerts') ||
+      req.path.startsWith('/privacy') ||
+      req.path.startsWith('/policies') ||
+      req.path.startsWith('/trust') ||
+      req.path.startsWith('/audit') ||
+      req.path.startsWith('/reports') ||
+      req.path.startsWith('/dashboard') ||
+      req.path.startsWith(env.API_PREFIX);
+
+    if (isApiRequest) {
+      res.status(404).json({
+        success: false,
+        error: {
+          code: 'API_ENDPOINT_NOT_FOUND',
+          message: `API endpoint '${req.method} ${req.originalUrl}' not found. Check the endpoint URL and HTTP method.`,
+        },
+      });
+      return;
+    }
+    next();
+  });
+
   // In production, serve the frontend SPA if the build directory exists
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+
   const possibleFrontendDirs = [
     path.resolve(process.cwd(), 'frontend/dist'),
     path.resolve(process.cwd(), '../frontend/dist'),
+    path.resolve(__dirname, '../../frontend/dist'),
+    path.resolve(__dirname, '../../../frontend/dist'),
   ];
+
   for (const dir of possibleFrontendDirs) {
     if (fs.existsSync(dir)) {
       app.use(express.static(dir));
       app.get('*', (req, res, next) => {
-        if (req.path.startsWith(env.API_PREFIX) || req.path.startsWith('/health')) {
+        if (
+          req.path.startsWith(env.API_PREFIX) ||
+          req.path.startsWith('/api') ||
+          req.path.startsWith('/auth') ||
+          req.path.startsWith('/health')
+        ) {
           return next();
         }
         res.sendFile(path.join(dir, 'index.html'));

@@ -2,6 +2,7 @@ import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { logger } from './utils/logger.js';
 import { testDatabaseConnection, appPool, adminPool } from './config/database.js';
+import { ensureDatabaseReady } from './database/auto-setup.js';
 
 const app = createApp();
 
@@ -13,6 +14,7 @@ const server = app.listen(env.PORT, async () => {
   const dbOk = await testDatabaseConnection();
   if (dbOk) {
     logger.info('✅ PostgreSQL connection verified and ready');
+    await ensureDatabaseReady();
   } else {
     logger.warn('⚠️ PostgreSQL connection failed. Ensure DATABASE_URL is configured or run migrations.');
   }

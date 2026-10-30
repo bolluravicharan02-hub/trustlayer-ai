@@ -40,6 +40,27 @@ describe('TrustLayer AI Core API Integration', () => {
     expect(res.body.error.details.length).toBeGreaterThanOrEqual(1);
   });
 
+  it('GET /health resolves on root as well as /api/v1/health', async () => {
+    const res = await request(app).get('/health');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.status).toBe('healthy');
+  });
+
+  it('GET /auth/csrf resolves on root as well as /api/v1/auth/csrf', async () => {
+    const res = await request(app).get('/auth/csrf');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.csrfToken).toBeDefined();
+  });
+
+  it('returns structured JSON 404 for unmatched API routes', async () => {
+    const res = await request(app).get('/api/v1/unknown-endpoint');
+    expect(res.status).toBe(404);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('API_ENDPOINT_NOT_FOUND');
+  });
+
   it('rejects state-changing requests missing CSRF token on protected mutation routes', async () => {
     const res = await request(app)
       .post('/api/v1/privacy/scan')
