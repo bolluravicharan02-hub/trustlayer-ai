@@ -3,6 +3,12 @@ import { z } from 'zod';
 
 dotenv.config();
 
+// Determine intelligent defaults for xAI Grok vs GroqCloud (handles gsk_ vs xai- keys)
+const rawGrokKey = (process.env.GROK_API_KEY || process.env.XAI_API_KEY || process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY || '').trim();
+const isGroqCloudKey = rawGrokKey.startsWith('gsk_');
+const defaultAiModel = isGroqCloudKey ? 'llama-3.3-70b-versatile' : 'grok-2-latest';
+const defaultAiBaseUrl = isGroqCloudKey ? 'https://api.groq.com/openai/v1' : 'https://api.x.ai/v1';
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(5000),
@@ -30,10 +36,10 @@ const envSchema = z.object({
   COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
   TRUST_PROXY: z.string().transform(v => v === 'true').default('false'),
 
-  // xAI Grok AI
-  GROK_API_KEY: z.string().optional().default(() => process.env.GROK_API_KEY || process.env.XAI_API_KEY || process.env.GEMINI_API_KEY || ''),
-  GROK_MODEL: z.string().default('grok-2-latest'),
-  GROK_BASE_URL: z.string().default('https://api.x.ai/v1'),
+  // xAI Grok / Groq AI
+  GROK_API_KEY: z.string().optional().default(() => rawGrokKey),
+  GROK_MODEL: z.string().default(() => process.env.GROK_MODEL || defaultAiModel),
+  GROK_BASE_URL: z.string().default(() => process.env.GROK_BASE_URL || defaultAiBaseUrl),
   GROK_TIMEOUT_MS: z.coerce.number().default(30000),
   GROK_MAX_OUTPUT_TOKENS: z.coerce.number().default(2048),
 
