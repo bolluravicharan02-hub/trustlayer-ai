@@ -1,4 +1,6 @@
 import express, { Express } from 'express';
+import path from 'path';
+import fs from 'fs';
 import cors from 'cors';
 import helmet from 'helmet';
 import session from 'express-session';
@@ -114,6 +116,24 @@ export function createApp(): Express {
   apiRouter.use(dashboardRouter);
 
   app.use(env.API_PREFIX, apiRouter);
+
+  // In production, serve the frontend SPA if the build directory exists
+  const possibleFrontendDirs = [
+    path.resolve(process.cwd(), 'frontend/dist'),
+    path.resolve(process.cwd(), '../frontend/dist'),
+  ];
+  for (const dir of possibleFrontendDirs) {
+    if (fs.existsSync(dir)) {
+      app.use(express.static(dir));
+      app.get('*', (req, res, next) => {
+        if (req.path.startsWith(env.API_PREFIX) || req.path.startsWith('/health')) {
+          return next();
+        }
+        res.sendFile(path.join(dir, 'index.html'));
+      });
+      break;
+    }
+  }
 
   // Central Error Handler
   app.use(errorHandler);

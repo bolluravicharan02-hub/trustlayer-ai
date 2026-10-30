@@ -8,3 +8,4 @@ if (isGrokConfigured()) {
 } else {
   logger.warn('GROK_API_KEY is not set. AI operations will run in local explanation mode.');
 }
+

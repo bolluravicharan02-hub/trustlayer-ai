@@ -14,6 +14,7 @@
     "build": "npm run build --prefix backend && npm run build --prefix frontend",
     "build:backend": "npm run build --prefix backend",
     "build:frontend": "npm run build --prefix frontend",
+    "start": "npm run start --prefix backend",
     "test": "npm run test --prefix backend",
     "db:migrate": "npm run db:migrate --prefix backend",
     "db:seed": "npm run db:seed --prefix backend"
@@ -29,6 +30,10 @@
     "threat-detection"
   ],
   "author": "TrustLayer AI Team",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.66.0",
+    "@rollup/rollup-linux-x64-musl": "4.66.0"
+  }
 }
 

@@ -62,3 +62,4 @@ services:
         sync: false
       - key: VITE_APP_ENV
         value: production
+
