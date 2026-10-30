@@ -2,7 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../services/api';
 import { PrivacyScan } from '../../types';
-import { LoadingSpinner, TableSkeleton } from '../../components/common/LoadingState';
+import { LoadingSpinner, TableSkeleton, ErrorCard } from '../../components/common/LoadingState';
 import { EmptyState } from '../../components/common/EmptyState';
 import { EyeOff, ShieldCheck, FileText, CheckCircle, ArrowRight, Lock } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -10,7 +10,12 @@ import { Link, useNavigate } from 'react-router-dom';
 export const PrivacyDashboardPage: React.FC = () => {
   const navigate = useNavigate();
 
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    isError: statsError,
+    refetch: refetchStats
+  } = useQuery({
     queryKey: ['privacy-stats'],
     queryFn: async () => {
       const res = await api.get('/privacy/stats');
@@ -23,7 +28,12 @@ export const PrivacyDashboardPage: React.FC = () => {
     },
   });
 
-  const { data: scans, isLoading: scansLoading } = useQuery({
+  const {
+    data: scans,
+    isLoading: scansLoading,
+    isError: scansError,
+    refetch: refetchScans
+  } = useQuery({
     queryKey: ['privacy-scans'],
     queryFn: async () => {
       const res = await api.get('/privacy/scans');
@@ -33,6 +43,19 @@ export const PrivacyDashboardPage: React.FC = () => {
 
   if (statsLoading || scansLoading) {
     return <LoadingSpinner message="Scanning privacy exposure inventory..." />;
+  }
+
+  if (statsError || scansError) {
+    return (
+      <ErrorCard
+        title="Privacy Telemetry Unavailable"
+        message="Failed to retrieve privacy scans and sensitive data exposure statistics."
+        onRetry={() => {
+          refetchStats();
+          refetchScans();
+        }}
+      />
+    );
   }
 
   return (

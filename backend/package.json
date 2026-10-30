@@ -11,6 +11,7 @@
     "start": "node dist/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "node tests/automated-browser-verification.cjs",
     "db:migrate": "tsx src/database/migrate.ts",
     "db:seed": "tsx src/database/seeds/development-seed.ts"
   },
@@ -41,6 +42,7 @@
     "@types/pg": "^8.11.10",
     "@types/supertest": "^6.0.2",
     "pg-mem": "^3.0.4",
+    "puppeteer-core": "^25.16.0",
     "supertest": "^7.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",

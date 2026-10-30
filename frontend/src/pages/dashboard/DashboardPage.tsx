@@ -2,7 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../services/api';
 import { DashboardSummary } from '../../types';
-import { LoadingSpinner } from '../../components/common/LoadingState';
+import { LoadingSpinner, ErrorCard } from '../../components/common/LoadingState';
 import { EmptyState } from '../../components/common/EmptyState';
 import {
   ShieldAlert,
@@ -31,7 +31,12 @@ import { Link } from 'react-router-dom';
 
 export const DashboardPage: React.FC = () => {
   // 1. Summary KPIs
-  const { data: summaryData, isLoading: summaryLoading } = useQuery({
+  const {
+    data: summaryData,
+    isLoading: summaryLoading,
+    isError: summaryError,
+    refetch: refetchSummary
+  } = useQuery({
     queryKey: ['dashboard-summary'],
     queryFn: async () => {
       const res = await api.get('/dashboard/summary');
@@ -40,7 +45,7 @@ export const DashboardPage: React.FC = () => {
   });
 
   // 2. Events Timeline Chart
-  const { data: timelineData } = useQuery({
+  const { data: timelineData, refetch: refetchTimeline } = useQuery({
     queryKey: ['dashboard-timeline'],
     queryFn: async () => {
       const res = await api.get('/dashboard/events-timeline');
@@ -49,7 +54,7 @@ export const DashboardPage: React.FC = () => {
   });
 
   // 3. Alerts Distribution Chart
-  const { data: alertsDist } = useQuery({
+  const { data: alertsDist, refetch: refetchAlerts } = useQuery({
     queryKey: ['dashboard-alerts-dist'],
     queryFn: async () => {
       const res = await api.get('/dashboard/alerts-distribution');
@@ -58,7 +63,7 @@ export const DashboardPage: React.FC = () => {
   });
 
   // 4. Privacy Categories Chart
-  const { data: privacyDist } = useQuery({
+  const { data: privacyDist, refetch: refetchPrivacy } = useQuery({
     queryKey: ['dashboard-privacy-dist'],
     queryFn: async () => {
       const res = await api.get('/dashboard/privacy-distribution');
@@ -67,7 +72,7 @@ export const DashboardPage: React.FC = () => {
   });
 
   // 5. Recent Activity Stream
-  const { data: recentActivity } = useQuery({
+  const { data: recentActivity, refetch: refetchActivity } = useQuery({
     queryKey: ['dashboard-recent-activity'],
     queryFn: async () => {
       const res = await api.get('/dashboard/recent-activity');
@@ -83,6 +88,22 @@ export const DashboardPage: React.FC = () => {
 
   if (summaryLoading) {
     return <LoadingSpinner message="Aggregating security and privacy telemetry..." />;
+  }
+
+  if (summaryError) {
+    return (
+      <ErrorCard
+        title="Dashboard Telemetry Failed"
+        message="Unable to aggregate security events and alert metrics. Please verify backend connectivity."
+        onRetry={() => {
+          refetchSummary();
+          refetchTimeline();
+          refetchAlerts();
+          refetchPrivacy();
+          refetchActivity();
+        }}
+      />
+    );
   }
 
   const summary = summaryData || {

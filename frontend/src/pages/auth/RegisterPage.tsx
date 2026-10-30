@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { SignUp } from '@clerk/clerk-react';
 import { useAuth, isClerkEnabled } from '../../contexts/AuthContext';
 import { Shield, Lock, Mail, User, Building2, AlertCircle, Loader2, Sparkles, KeyRound } from 'lucide-react';
 
 export const RegisterPage: React.FC = () => {
-  const { register } = useAuth();
+  const { register, user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [authMode, setAuthMode] = useState<'clerk' | 'local'>(isClerkEnabled ? 'clerk' : 'local');
@@ -16,6 +16,11 @@ export const RegisterPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // If already authenticated, redirect to /app
+  if (user) {
+    return <Navigate to="/app" replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +53,10 @@ export const RegisterPage: React.FC = () => {
         err.response?.data?.error?.message ||
         err.response?.data?.message ||
         (typeof err.response?.data === 'string' ? err.response.data : '');
-      const is404 = status === 404 || dataMsg.includes('could not be found') || dataMsg.includes('Not Found');
+      const is404 =
+        status === 404 ||
+        dataMsg.toLowerCase().includes('could not be found') ||
+        dataMsg.toLowerCase().includes('not found');
 
       if (is404) {
         setError('Backend API service not reachable (404 Not Found). Please verify that your Render backend is running.');
@@ -151,6 +159,7 @@ export const RegisterPage: React.FC = () => {
                     <input
                       type="email"
                       required
+                      autoComplete="username"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="alex@acmecorp.internal"
@@ -187,6 +196,7 @@ export const RegisterPage: React.FC = () => {
                     <input
                       type="password"
                       required
+                      autoComplete="new-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Min. 12 characters"
@@ -204,6 +214,7 @@ export const RegisterPage: React.FC = () => {
                     <input
                       type="password"
                       required
+                      autoComplete="new-password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Repeat password"
@@ -219,10 +230,10 @@ export const RegisterPage: React.FC = () => {
 
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || authLoading}
                 className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl font-semibold text-sm transition shadow-lg shadow-blue-600/25 flex items-center justify-center space-x-2 mt-2"
               >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Create Organization</span>}
+                {isLoading || authLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Create Organization</span>}
               </button>
             </form>
 

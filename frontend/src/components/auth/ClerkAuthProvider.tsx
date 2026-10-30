@@ -8,7 +8,7 @@ const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const ClerkSyncBridge: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isLoaded, isSignedIn, getToken, signOut } = useClerkAuth();
   const { user: clerkUser } = useClerkUser();
-  const { setSessionData, registerClerkSignOut } = useAuth();
+  const { user, setSessionData, registerClerkSignOut } = useAuth();
 
   // Register token getter and signOut callback
   useEffect(() => {
@@ -42,14 +42,15 @@ const ClerkSyncBridge: React.FC<{ children: React.ReactNode }> = ({ children }) 
         }
       };
       syncWithBackend();
-    } else {
+    } else if (user?.clerkUserId) {
+      // Only wipe session if the current active session was established via Clerk
       setSessionData({
         user: null,
         organization: null,
         organizations: [],
       });
     }
-  }, [isLoaded, isSignedIn, clerkUser, setSessionData]);
+  }, [isLoaded, isSignedIn, clerkUser, user?.clerkUserId, setSessionData]);
 
   return <>{children}</>;
 };

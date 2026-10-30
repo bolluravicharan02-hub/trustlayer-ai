@@ -58,8 +58,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setCsrfToken(csrfRes.data.data.csrfToken);
         }
 
-        // If not using Clerk, check session auth via /auth/me
-        if (!isClerkEnabled) {
+        // Check active session via /auth/me for local / demo logins or existing session cookie
+        try {
           const meRes = await api.get('/auth/me');
           if (meRes.data?.data?.user) {
             setUser(meRes.data.data.user);
@@ -68,15 +68,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setCurrentOrg(active);
             if (active) setCurrentOrgId(active.id);
           }
+        } catch {
+          // If unauthenticated or 401, user remains null unless Clerk authenticates
         }
       } catch {
         setUser(null);
         setCurrentOrg(null);
         setOrganizations([]);
       } finally {
-        if (!isClerkEnabled) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       }
     };
 

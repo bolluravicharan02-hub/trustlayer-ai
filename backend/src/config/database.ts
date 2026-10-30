@@ -24,7 +24,7 @@ export const adminPool = new Pool({
 
 // Restricted application runtime pool (Enforces RLS)
 export const appPool = new Pool({
-  connectionString: env.DATABASE_APP_URL,
+  connectionString: env.DATABASE_APP_URL || env.DATABASE_URL,
   ssl: sslConfig,
   max: 20,
   idleTimeoutMillis: 30000,

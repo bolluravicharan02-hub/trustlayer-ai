@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../services/api';
 import { AIAnalysisRun } from '../../types';
-import { LoadingSpinner, TableSkeleton } from '../../components/common/LoadingState';
+import { LoadingSpinner, TableSkeleton, ErrorCard } from '../../components/common/LoadingState';
 import {
   Sparkles,
   Shield,
@@ -19,7 +19,12 @@ import {
 export const TrustCenterPage: React.FC = () => {
   const [selectedRun, setSelectedRun] = useState<AIAnalysisRun | null>(null);
 
-  const { data: overview, isLoading: overviewLoading } = useQuery({
+  const {
+    data: overview,
+    isLoading: overviewLoading,
+    isError: overviewError,
+    refetch: refetchOverview
+  } = useQuery({
     queryKey: ['trust-overview'],
     queryFn: async () => {
       const res = await api.get('/trust/overview');
@@ -27,7 +32,12 @@ export const TrustCenterPage: React.FC = () => {
     },
   });
 
-  const { data: runs, isLoading: runsLoading } = useQuery({
+  const {
+    data: runs,
+    isLoading: runsLoading,
+    isError: runsError,
+    refetch: refetchRuns
+  } = useQuery({
     queryKey: ['trust-ai-runs'],
     queryFn: async () => {
       const res = await api.get('/trust/ai-runs');
@@ -35,7 +45,7 @@ export const TrustCenterPage: React.FC = () => {
     },
   });
 
-  const { data: info } = useQuery({
+  const { data: info, refetch: refetchInfo } = useQuery({
     queryKey: ['trust-info'],
     queryFn: async () => {
       const res = await api.get('/trust/information');
@@ -45,6 +55,20 @@ export const TrustCenterPage: React.FC = () => {
 
   if (overviewLoading || runsLoading) {
     return <LoadingSpinner message="Loading AI model disclosures and run history..." />;
+  }
+
+  if (overviewError || runsError) {
+    return (
+      <ErrorCard
+        title="Trust Center Telemetry Failed"
+        message="Unable to load AI governance metrics, model transparency cards, or investigation run history."
+        onRetry={() => {
+          refetchOverview();
+          refetchRuns();
+          refetchInfo();
+        }}
+      />
+    );
   }
 
   return (

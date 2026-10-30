@@ -10,11 +10,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * Ensures database schema and essential demo seed data are initialized
- * automatically when the backend boots up in production or development.
+ * Ensures database schema migrations and deterministic demo seed data
+ * are initialized incrementally on every server boot.
  */
 export async function ensureDatabaseReady(): Promise<boolean> {
-  // Skip in test environment to avoid interfering with mocks/in-memory DB
+  // Skip in test environment to avoid interfering with mocks / pg-mem
   if (env.NODE_ENV === 'test') {
     return true;
   }
@@ -28,186 +28,178 @@ export async function ensureDatabaseReady(): Promise<boolean> {
   }
 
   try {
-    // 1. Check if core tables exist
-    const tableCheck = await client.query(`
-      SELECT 1 FROM information_schema.tables 
-      WHERE table_schema = 'public' AND table_name = 'users'
-    `);
+    // -------------------------------------------------------------
+    // 1. INCREMENTAL MIGRATION RUNNER
+    // -------------------------------------------------------------
+    const possiblePaths = [
+      path.resolve(process.cwd(), 'database/migrations'),
+      path.resolve(process.cwd(), '../database/migrations'),
+      path.resolve(__dirname, '../../../database/migrations'),
+      path.resolve(__dirname, '../../database/migrations'),
+      path.resolve(__dirname, '../database/migrations'),
+    ];
 
-    const hasTables = tableCheck.rows.length > 0;
-
-    if (!hasTables) {
-      logger.info('📦 Database tables not found. Automatically running schema migrations...');
-
-      const possiblePaths = [
-        path.resolve(process.cwd(), 'database/migrations'),
-        path.resolve(process.cwd(), '../database/migrations'),
-        path.resolve(__dirname, '../../../database/migrations'),
-        path.resolve(__dirname, '../../database/migrations'),
-        path.resolve(__dirname, '../database/migrations'),
-      ];
-
-      let migrationsDir = '';
-      for (const p of possiblePaths) {
-        if (fs.existsSync(p)) {
-          migrationsDir = p;
-          break;
-        }
+    let migrationsDir = '';
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        migrationsDir = p;
+        break;
       }
+    }
 
-      if (migrationsDir) {
-        const migrationFiles = fs.readdirSync(migrationsDir)
-          .filter(f => f.endsWith('.sql'))
-          .sort();
+    if (migrationsDir) {
+      // Ensure migrations tracker table exists
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS _schema_migrations (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL UNIQUE,
+          applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+      `);
 
-        await client.query(`
-          CREATE TABLE IF NOT EXISTS _schema_migrations (
-            id SERIAL PRIMARY KEY,
-            name VARCHAR(255) NOT NULL UNIQUE,
-            applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-          );
-        `);
+      const migrationFiles = fs.readdirSync(migrationsDir)
+        .filter(f => f.endsWith('.sql'))
+        .sort();
 
-        for (const file of migrationFiles) {
-          const applied = await client.query(
-            'SELECT 1 FROM _schema_migrations WHERE name = $1',
-            [file]
-          );
+      for (const file of migrationFiles) {
+        const applied = await client.query(
+          'SELECT 1 FROM _schema_migrations WHERE name = $1',
+          [file]
+        );
 
-          if (applied.rows.length === 0) {
-            logger.info(`⏳ Applying migration: ${file}...`);
-            const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
-            await client.query('BEGIN');
-            try {
-              await client.query(sql);
-              await client.query('INSERT INTO _schema_migrations (name) VALUES ($1)', [file]);
-              await client.query('COMMIT');
-              logger.info(`✅ Migration applied: ${file}`);
-            } catch (migErr) {
-              await client.query('ROLLBACK');
-              logger.error({ migErr, file }, `❌ Migration failed: ${file}`);
-              throw migErr;
-            }
+        if (applied.rows.length === 0) {
+          logger.info(`⏳ Applying migration: ${file}...`);
+          const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+          await client.query('BEGIN');
+          try {
+            await client.query(sql);
+            await client.query(
+              'INSERT INTO _schema_migrations (name) VALUES ($1)',
+              [file]
+            );
+            await client.query('COMMIT');
+            logger.info(`✅ Successfully applied migration: ${file}`);
+          } catch (migErr: any) {
+            await client.query('ROLLBACK');
+            logger.error({ migErr: migErr.message, file }, `❌ Failed applying migration: ${file}`);
+            throw migErr;
           }
         }
-      } else {
-        logger.warn('⚠️ Migrations directory not located, skipping automated SQL migration.');
       }
+    } else {
+      logger.warn('⚠️ Migrations directory not located, skipping automated SQL migrations.');
     }
 
-    // 2. Check and seed demo admin user if not present
-    const userCheck = await client.query(
-      `SELECT id FROM users WHERE email = 'alex.security@acmecorp.internal'`
+    // -------------------------------------------------------------
+    // 2. DETERMINISTIC DEMO SEED
+    // -------------------------------------------------------------
+    logger.info('🌱 Verifying and upserting demo accounts and default policies...');
+    await client.query('BEGIN');
+
+    const passwordHash = await argon2.hash('DemoSecurity2026!', {
+      type: argon2.argon2id,
+      memoryCost: 65536,
+      timeCost: 3,
+      parallelism: 4,
+    });
+
+    // 2a. Upsert Demo Users
+    const ownerRes = await client.query(
+      `INSERT INTO users (full_name, email, password_hash, is_active)
+       VALUES ($1, $2, $3, true)
+       ON CONFLICT (email) DO UPDATE 
+       SET password_hash = EXCLUDED.password_hash,
+           is_active = true
+       RETURNING id, full_name, email`,
+      ['Alex Rivera', 'alex.security@acmecorp.internal', passwordHash]
+    );
+    const ownerUser = ownerRes.rows[0];
+
+    const analystRes = await client.query(
+      `INSERT INTO users (full_name, email, password_hash, is_active)
+       VALUES ($1, $2, $3, true)
+       ON CONFLICT (email) DO UPDATE 
+       SET password_hash = EXCLUDED.password_hash,
+           is_active = true
+       RETURNING id, full_name, email`,
+      ['Maya Lin', 'maya.analyst@acmecorp.internal', passwordHash]
+    );
+    const analystUser = analystRes.rows[0];
+
+    // 2b. Upsert Demo Organization
+    const orgRes = await client.query(
+      `INSERT INTO organizations (name, slug, settings)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (slug) DO UPDATE 
+       SET name = EXCLUDED.name
+       RETURNING id, name, slug`,
+      [
+        'Acme Defense Labs',
+        'acme-defense-labs',
+        JSON.stringify({ defaultRetentionDays: 90, requireHumanApproval: true }),
+      ]
+    );
+    const org = orgRes.rows[0];
+
+    // 2c. Upsert Organization Memberships
+    await client.query(
+      `INSERT INTO organization_memberships (organization_id, user_id, role, status)
+       VALUES ($1, $2, 'owner', 'active')
+       ON CONFLICT (organization_id, user_id) DO UPDATE 
+       SET role = 'owner', status = 'active'`,
+      [org.id, ownerUser.id]
     );
 
-    if (userCheck.rows.length === 0) {
-      logger.info('🌱 Seeding demo accounts (alex.security@acmecorp.internal)...');
-      await client.query('BEGIN');
+    await client.query(
+      `INSERT INTO organization_memberships (organization_id, user_id, role, status)
+       VALUES ($1, $2, 'analyst', 'active')
+       ON CONFLICT (organization_id, user_id) DO UPDATE 
+       SET role = 'analyst', status = 'active'`,
+      [org.id, analystUser.id]
+    );
 
-      const passwordHash = await argon2.hash('DemoSecurity2026!', {
-        type: argon2.argon2id,
-        memoryCost: 65536,
-        timeCost: 3,
-        parallelism: 4,
-      });
+    // 2d. Upsert Default Policies into security_policies
+    const defaultPolicies = [
+      {
+        name: 'Authentication Brute Force Threshold',
+        description: 'Generates alerts when >= 5 failed logins occur within 5 minutes from a single IP or user.',
+        category: 'authentication',
+        policyType: 'brute_force_rule',
+        configuration: { threshold: 5, windowMinutes: 5, action: 'alert' },
+      },
+      {
+        name: 'Data Exfiltration Sentinel',
+        description: 'Detects and flags bulk export events involving more than 1,000 records or restricted datasets.',
+        category: 'suspicious_export',
+        policyType: 'export_volume_rule',
+        configuration: { maxRecordLimit: 1000, maxByteLimit: 50000000 },
+      },
+      {
+        name: 'Sensitive Secret Redaction Policy',
+        description: 'Mandates automated redaction for API keys, JWTs, and payment cards prior to persistence or AI analysis.',
+        category: 'sensitive_data',
+        policyType: 'privacy_redaction_rule',
+        configuration: { categories: ['api_key', 'jwt', 'payment_card', 'private_key'], autoRedact: true },
+      },
+    ];
 
-      // Insert Demo Users
-      const ownerRes = await client.query(
-        `INSERT INTO users (full_name, email, password_hash, is_active)
-         VALUES ($1, $2, $3, true)
-         ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash
-         RETURNING id, full_name, email`,
-        ['Alex Rivera', 'alex.security@acmecorp.internal', passwordHash]
-      );
-      const ownerUser = ownerRes.rows[0];
-
-      const analystRes = await client.query(
-        `INSERT INTO users (full_name, email, password_hash, is_active)
-         VALUES ($1, $2, $3, true)
-         ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash
-         RETURNING id, full_name, email`,
-        ['Maya Lin', 'maya.analyst@acmecorp.internal', passwordHash]
-      );
-      const analystUser = analystRes.rows[0];
-
-      // Insert Demo Organization
-      const orgRes = await client.query(
-        `INSERT INTO organizations (name, slug, settings)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
-         RETURNING id, name, slug`,
-        [
-          'Acme Defense Labs',
-          'acme-defense-labs',
-          JSON.stringify({ defaultRetentionDays: 90, requireHumanApproval: true }),
-        ]
-      );
-      const org = orgRes.rows[0];
-
-      // Insert Memberships
+    for (const p of defaultPolicies) {
       await client.query(
-        `INSERT INTO organization_memberships (organization_id, user_id, role, status)
-         VALUES ($1, $2, 'owner', 'active')
-         ON CONFLICT (organization_id, user_id) DO NOTHING`,
-        [org.id, ownerUser.id]
+        `INSERT INTO security_policies (organization_id, name, description, category, policy_type, configuration, is_enabled, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, true, $7)
+         ON CONFLICT (organization_id, name) DO UPDATE SET configuration = EXCLUDED.configuration`,
+        [org.id, p.name, p.description, p.category, p.policyType, JSON.stringify(p.configuration), ownerUser.id]
       );
-
-      await client.query(
-        `INSERT INTO organization_memberships (organization_id, user_id, role, status)
-         VALUES ($1, $2, 'analyst', 'active')
-         ON CONFLICT (organization_id, user_id) DO NOTHING`,
-        [org.id, analystUser.id]
-      );
-
-      // Insert Default Detection Policies
-      const defaultPolicies = [
-        {
-          name: 'Brute Force Authentication Detection',
-          description: 'Triggers a High severity alert when 5 or more failed login attempts are detected within 10 minutes.',
-          policyType: 'detection',
-          severity: 'high',
-          action: 'alert',
-          rules: { eventType: 'auth.login_failed', thresholdCount: 5, timeWindowMinutes: 10, riskScoreAddition: 40 },
-        },
-        {
-          name: 'Sensitive PII & Secret Redaction Policy',
-          description: 'Scans for exposed API tokens, passwords, credit card numbers, and SSNs in log payloads.',
-          policyType: 'privacy',
-          severity: 'critical',
-          action: 'redact',
-          rules: { detectCategories: ['secret', 'financial', 'government_id', 'contact'], autoRedact: true },
-        },
-        {
-          name: 'Privilege Escalation Monitor',
-          description: 'Monitors unauthorized role modifications and administrator grant events.',
-          policyType: 'detection',
-          severity: 'critical',
-          action: 'quarantine',
-          rules: { eventType: 'role.promoted', suspiciousTargetRoles: ['admin', 'owner'], riskScoreAddition: 55 },
-        },
-      ];
-
-      for (const p of defaultPolicies) {
-        await client.query(
-          `INSERT INTO policies (organization_id, name, description, policy_type, severity, action, rules, is_active)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, true)
-           ON CONFLICT DO NOTHING`,
-          [org.id, p.name, p.description, p.policyType, p.severity, p.action, JSON.stringify(p.rules)]
-        );
-      }
-
-      await client.query('COMMIT');
-      logger.info('✅ Database schema verified and demo accounts initialized successfully.');
-    } else {
-      logger.info('✅ Database verified: Tables and accounts are ready.');
     }
 
+    await client.query('COMMIT');
+    logger.info('✅ Database schema and demo credentials verified and ready.');
     return true;
   } catch (err: any) {
     if (client) {
       await client.query('ROLLBACK').catch(() => {});
     }
-    logger.warn({ err: err.message }, '⚠️ Auto database setup encountered a warning. Continuing startup...');
+    logger.warn({ err: err.message }, '⚠️ Auto database setup encountered an issue. Continuing server execution...');
     return false;
   } finally {
     if (client) {
@@ -215,4 +207,3 @@ export async function ensureDatabaseReady(): Promise<boolean> {
     }
   }
 }
-

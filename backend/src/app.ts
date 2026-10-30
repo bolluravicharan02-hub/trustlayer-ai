@@ -33,9 +33,31 @@ export function createApp(): Express {
     app.set('trust proxy', 1);
   }
 
-  // Security Headers
+  // Security Headers with relaxed CSP for Clerk auth, Google Fonts, and Grok AI integrations
   app.use(helmet({
-    contentSecurityPolicy: env.NODE_ENV === 'production' ? undefined : false,
+    contentSecurityPolicy: env.NODE_ENV === 'production' ? {
+      directives: {
+        defaultSrc: ["'self'"],
+        connectSrc: [
+          "'self'",
+          "https://*.clerk.accounts.dev",
+          "https://*.clerk.com",
+          "https://api.x.ai",
+          "https://api.groq.com",
+          "https://*.supabase.co"
+        ],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://*.clerk.accounts.dev",
+          "https://*.clerk.com"
+        ],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "https://img.clerk.com", "https://*.clerk.com"],
+        workerSrc: ["'self'", "blob:"],
+      },
+    } : false,
     crossOriginEmbedderPolicy: false,
   }));
 
@@ -46,9 +68,15 @@ export function createApp(): Express {
       // or if origin is explicitly allowed or matches preview / deployment hosts (*.onrender.com, *.vercel.app)
       const isAllowed =
         !origin ||
+        origin === 'null' ||
         env.ALLOWED_ORIGINS.includes(origin) ||
         env.NODE_ENV === 'development' ||
-        (typeof origin === 'string' && (origin.endsWith('.onrender.com') || origin.endsWith('.vercel.app')));
+        (typeof origin === 'string' && (
+          origin.startsWith('http://localhost') ||
+          origin.startsWith('http://127.0.0.1') ||
+          origin.endsWith('.onrender.com') ||
+          origin.endsWith('.vercel.app')
+        ));
 
       if (isAllowed) {
         callback(null, true);
@@ -132,35 +160,6 @@ export function createApp(): Express {
     app.use(apiRouter);
   }
 
-  // Explicit structured JSON 404 for unmatched API requests so client never receives HTML error pages
-  app.use((req, res, next) => {
-    const isApiRequest =
-      req.path.startsWith('/api') ||
-      req.path.startsWith('/auth') ||
-      req.path.startsWith('/health') ||
-      req.path.startsWith('/events') ||
-      req.path.startsWith('/alerts') ||
-      req.path.startsWith('/privacy') ||
-      req.path.startsWith('/policies') ||
-      req.path.startsWith('/trust') ||
-      req.path.startsWith('/audit') ||
-      req.path.startsWith('/reports') ||
-      req.path.startsWith('/dashboard') ||
-      req.path.startsWith(env.API_PREFIX);
-
-    if (isApiRequest) {
-      res.status(404).json({
-        success: false,
-        error: {
-          code: 'API_ENDPOINT_NOT_FOUND',
-          message: `API endpoint '${req.method} ${req.originalUrl}' not found. Check the endpoint URL and HTTP method.`,
-        },
-      });
-      return;
-    }
-    next();
-  });
-
   // In production, serve the frontend SPA if the build directory exists
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
@@ -176,10 +175,10 @@ export function createApp(): Express {
     if (fs.existsSync(dir)) {
       app.use(express.static(dir));
       app.get('*', (req, res, next) => {
+        // Explicit API endpoints and health checks pass through to API router / 404 handler
         if (
           req.path.startsWith(env.API_PREFIX) ||
           req.path.startsWith('/api') ||
-          req.path.startsWith('/auth') ||
           req.path.startsWith('/health')
         ) {
           return next();
@@ -189,6 +188,28 @@ export function createApp(): Express {
       break;
     }
   }
+
+  // Explicit structured JSON 404 for unmatched API requests so client never receives HTML error pages
+  app.use((req, res, next) => {
+    const isApiRequest =
+      req.path.startsWith('/api') ||
+      req.path.startsWith(env.API_PREFIX) ||
+      req.path.startsWith('/health') ||
+      req.path.startsWith('/auth') ||
+      Boolean(req.headers.accept?.includes('application/json'));
+
+    if (isApiRequest || req.method !== 'GET') {
+      res.status(404).json({
+        success: false,
+        error: {
+          code: 'API_ENDPOINT_NOT_FOUND',
+          message: `API endpoint '${req.method} ${req.originalUrl}' not found. Check the endpoint URL and HTTP method.`,
+        },
+      });
+      return;
+    }
+    next();
+  });
 
   // Central Error Handler
   app.use(errorHandler);

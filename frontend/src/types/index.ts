@@ -8,6 +8,7 @@ export interface User {
   fullName: string;
   email: string;
   isActive?: boolean;
+  clerkUserId?: string | null;
 }
 
 export interface Organization {

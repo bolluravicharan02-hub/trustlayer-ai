@@ -71,10 +71,22 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   }
 
   try {
-    const userRes = await appPool.query(
-      'SELECT id, email, full_name, is_active, clerk_user_id FROM users WHERE id = $1',
-      [userId]
-    );
+    let userRes;
+    try {
+      userRes = await appPool.query(
+        'SELECT id, email, full_name, is_active, clerk_user_id FROM users WHERE id = $1',
+        [userId]
+      );
+    } catch (queryErr: any) {
+      if (queryErr.message?.includes('clerk_user_id')) {
+        userRes = await appPool.query(
+          'SELECT id, email, full_name, is_active FROM users WHERE id = $1',
+          [userId]
+        );
+      } else {
+        throw queryErr;
+      }
+    }
 
     if (userRes.rows.length === 0 || !userRes.rows[0].is_active) {
       req.session.destroy(() => {});
@@ -94,7 +106,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       email: row.email,
       fullName: row.full_name,
       isActive: row.is_active,
-      clerkUserId: row.clerk_user_id,
+      clerkUserId: row.clerk_user_id || undefined,
     };
 
     next();

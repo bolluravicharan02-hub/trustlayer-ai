@@ -61,6 +61,20 @@ describe('TrustLayer AI Core API Integration', () => {
     expect(res.body.error.code).toBe('API_ENDPOINT_NOT_FOUND');
   });
 
+  it('serves SPA index.html for direct navigation to /privacy, /security, and /app/events', async () => {
+    const privacyRes = await request(app).get('/privacy');
+    expect(privacyRes.status).toBe(200);
+    expect(privacyRes.headers['content-type']).toContain('text/html');
+
+    const securityRes = await request(app).get('/security');
+    expect(securityRes.status).toBe(200);
+    expect(securityRes.headers['content-type']).toContain('text/html');
+
+    const appRes = await request(app).get('/app/events');
+    expect(appRes.status).toBe(200);
+    expect(appRes.headers['content-type']).toContain('text/html');
+  });
+
   it('rejects state-changing requests missing CSRF token on protected mutation routes', async () => {
     const res = await request(app)
       .post('/api/v1/privacy/scan')

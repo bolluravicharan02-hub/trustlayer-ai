@@ -10,6 +10,25 @@ export function resolveApiBaseUrl(): string {
     if (saved && saved.trim()) {
       return sanitizeUrl(saved.trim());
     }
+
+    // If running locally on localhost/127.0.0.1 without explicit override, use relative path
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return '/api/v1';
+    }
+
+    // If served by the same host in unified deployment, use relative path to prevent CORS & third-party cookie issues
+    const envUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
+    if (envUrl) {
+      try {
+        const parsed = new URL(envUrl);
+        if (parsed.origin === window.location.origin) {
+          return '/api/v1';
+        }
+      } catch {
+        // Continue to sanitizeUrl
+      }
+      return sanitizeUrl(envUrl);
+    }
   }
 
   // 2. Read Vite environment variable

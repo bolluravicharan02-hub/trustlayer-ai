@@ -1,19 +1,26 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { SignIn } from '@clerk/clerk-react';
 import { useAuth, isClerkEnabled } from '../../contexts/AuthContext';
 import { getApiBaseUrl, updateApiBaseUrl } from '../../services/api';
 import { Shield, Lock, Mail, AlertCircle, Loader2, KeyRound, Sparkles, Server, Check } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
-  const { login } = useAuth();
+  const { login, user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  const [authMode, setAuthMode] = useState<'clerk' | 'local'>(isClerkEnabled ? 'clerk' : 'local');
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const initialMode = searchParams?.get('mode') === 'local' ? 'local' : (isClerkEnabled ? 'clerk' : 'local');
+  const [authMode, setAuthMode] = useState<'clerk' | 'local'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // If already authenticated, redirect straight to /app
+  if (user) {
+    return <Navigate to="/app" replace />;
+  }
 
   // Backend URL configuration modal/panel for Render or custom deploys
   const [showBackendConfig, setShowBackendConfig] = useState(false);
@@ -34,7 +41,10 @@ export const LoginPage: React.FC = () => {
         err.response?.data?.error?.message ||
         err.response?.data?.message ||
         (typeof err.response?.data === 'string' ? err.response.data : '');
-      const is404 = status === 404 || dataMsg.includes('could not be found') || dataMsg.includes('Not Found');
+      const is404 =
+        status === 404 ||
+        dataMsg.toLowerCase().includes('could not be found') ||
+        dataMsg.toLowerCase().includes('not found');
 
       if (is404) {
         setError(
@@ -182,6 +192,7 @@ export const LoginPage: React.FC = () => {
                   <input
                     type="email"
                     required
+                    autoComplete="username"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@organization.com"
@@ -199,6 +210,7 @@ export const LoginPage: React.FC = () => {
                   <input
                     type="password"
                     required
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
@@ -209,10 +221,10 @@ export const LoginPage: React.FC = () => {
 
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || authLoading}
                 className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl font-semibold text-sm transition shadow-lg shadow-blue-600/25 flex items-center justify-center space-x-2 mt-2"
               >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Sign In</span>}
+                {isLoading || authLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Sign In</span>}
               </button>
             </form>
 

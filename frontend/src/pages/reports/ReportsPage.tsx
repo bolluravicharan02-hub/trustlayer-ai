@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../services/api';
-import { LoadingSpinner } from '../../components/common/LoadingState';
+import { LoadingSpinner, ErrorCard } from '../../components/common/LoadingState';
 import {
   BarChart3,
   Download,
@@ -17,7 +17,12 @@ import { toast } from 'sonner';
 export const ReportsPage: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
 
-  const { data: overview, isLoading } = useQuery({
+  const {
+    data: overview,
+    isLoading,
+    isError,
+    refetch
+  } = useQuery({
     queryKey: ['reports-overview'],
     queryFn: async () => {
       const res = await api.get('/reports/overview');
@@ -62,6 +67,16 @@ export const ReportsPage: React.FC = () => {
 
   if (isLoading) {
     return <LoadingSpinner message="Generating executive security and compliance report..." />;
+  }
+
+  if (isError) {
+    return (
+      <ErrorCard
+        title="Compliance Report Generation Failed"
+        message="Unable to aggregate telemetry metrics for executive reporting. Please verify backend status."
+        onRetry={() => refetch()}
+      />
+    );
   }
 
   return (
