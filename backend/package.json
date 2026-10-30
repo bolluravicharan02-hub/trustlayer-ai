@@ -17,7 +17,6 @@
   "dependencies": {
     "@clerk/backend": "^3.26.4",
     "@clerk/express": "^2.1.85",
-    "@google/genai": "^2.32.0",
     "argon2": "^0.41.1",
     "connect-pg-simple": "^10.0.0",
     "cors": "^2.8.5",

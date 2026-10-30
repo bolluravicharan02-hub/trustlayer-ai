@@ -157,7 +157,7 @@ export const AlertDetailsPage: React.FC = () => {
           </div>
           <div>
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              Gemini AI Security Copilot
+              Grok AI Security Copilot
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-mono">
                 Explainable
               </span>
@@ -175,7 +175,7 @@ export const AlertDetailsPage: React.FC = () => {
         >
           {isAnalyzing ? (
             <>
-              <LoadingSpinner message="Consulting Gemini..." />
+              <LoadingSpinner message="Consulting Grok..." />
             </>
           ) : (
             <>

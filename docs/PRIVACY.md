@@ -72,7 +72,7 @@ Redactions occur in reverse character-offset order, preserving original indexing
 
 ## 5. Zero-Exposure AI Boundary
 
-1. Raw event payloads are passed through `RedactionService.redactObject()` before any Gemini API call.
+1. Raw event payloads are passed through `RedactionService.redactObject()` before any Grok API call.
 2. The AI model only receives sanitized text and format placeholders.
 3. Model responses are parsed strictly against strict Zod schemas.
 4. Input digests are hashed (SHA-256) and recorded in `ai_analysis_runs` for audit transparency without persisting raw prompt secrets.

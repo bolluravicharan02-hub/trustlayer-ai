@@ -9,7 +9,7 @@ Enterprise-grade backend for **TrustLayer AI**, a privacy-first security monitor
 - **Authentication**: Password hashing with Argon2id, PostgreSQL session storage via `connect-pg-simple`, CSRF synchronizer token protection
 - **Threat Detection Engine**: Deterministic rules for brute force, privilege escalation, suspicious data export, unusual access patterns, sensitive data exposure, and high-risk events
 - **Privacy Engine**: High-fidelity sensitive data scanner (emails, phone numbers, Luhn-verified credit cards, API keys, bearer tokens, JWTs, private keys, IPv4/IPv6, custom regex) with category-based redaction
-- **AI Intelligence**: Google Gemini (`@google/genai`) with structured JSON schema output, Zod runtime validation, and strict prompt injection defense
+- **AI Intelligence**: xAI Grok (`grok-2-latest`) with structured JSON schema output, Zod runtime validation, and strict prompt injection defense
 - **Audit Logging**: SHA-256 cryptographic hash chain with database triggers preventing modification/deletion, plus an automated hash integrity verifier (`/api/v1/audit/verify`)
 
 ---
@@ -18,7 +18,7 @@ Enterprise-grade backend for **TrustLayer AI**, a privacy-first security monitor
 
 - Node.js 22 LTS or newer
 - PostgreSQL 15+ (Replit PostgreSQL, Neon, Supabase, or local instance)
-- Google Gemini API Key (optional for basic detection, required for live AI explanations)
+- xAI Grok API Key (optional for basic detection, required for live AI explanations)
 
 ---
 
@@ -32,7 +32,7 @@ Enterprise-grade backend for **TrustLayer AI**, a privacy-first security monitor
 2. Configure environment:
    ```bash
    cp .env.example .env
-   # Edit .env with your PostgreSQL credentials and GEMINI_API_KEY
+   # Edit .env with your PostgreSQL credentials and GROK_API_KEY
    ```
 
 3. Run database migrations:

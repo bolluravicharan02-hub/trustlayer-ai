@@ -418,7 +418,7 @@ alertsRouter.post(
   }
 );
 
-// Request Gemini AI Investigation
+// Request Grok AI Investigation
 alertsRouter.post(
   '/alerts/:id/analyze',
   requireAuth,

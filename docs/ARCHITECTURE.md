@@ -10,7 +10,7 @@ TrustLayer AI is an enterprise SaaS platform engineered to solve the triad of mo
 Unlike traditional SIEMs that dump cryptic log alerts or naive wrappers that feed raw confidential logs to third-party LLMs, TrustLayer AI introduces a deterministic-first architecture:
 - Deterministic rules detect attacks mathematically.
 - Sensitive information is masked **before** storage or external transit.
-- Google Gemini enriches context and explains root causes without receiving raw credentials.
+- xAI Grok enriches context and explains root causes without receiving raw credentials.
 - Every state change and AI query is chained into an append-only SHA-256 cryptographic audit trail.
 
 ---
@@ -28,7 +28,7 @@ Unlike traditional SIEMs that dump cryptic log alerts or naive wrappers that fee
 │                 Express.js REST API Server (Node 22 LTS)               │
 │  Clerk Token Verification • Helmet • Rate Limiting • Zod Validation   │
 ├───────────────────┬──────────────────────────┬─────────────────────────┤
-│ Threat Detection  │ Privacy Scanner &        │ Gemini AI Reasoning     │
+│ Threat Detection  │ Privacy Scanner &        │ Grok AI Reasoning       │
 │ Deterministic     │ Redaction Engine         │ Structured Output (JSON)│
 │ Rules (0-100 score│ Luhn Verification        │ System Prompt Sandbox   │
 └─────────┬─────────┴────────────┬─────────────┴────────────┬────────────┘
@@ -85,14 +85,14 @@ Matches are replaced with format-preserving tags such as `[REDACTED_EMAIL]`, `[R
 
 ---
 
-## 5. Google Gemini SDK Integration & Safety
+## 5. xAI Grok API Integration & Safety
 
-- Uses official `@google/genai` Node.js package.
-- API Key remains strictly server-side (`GEMINI_API_KEY`).
+- Interacts directly with xAI API (`https://api.x.ai/v1/chat/completions`).
+- API Key remains strictly server-side (`GROK_API_KEY`).
 - System prompt instructs model that all input logs are untrusted evidence and to reject prompt injection attempts.
-- Structured JSON output enforced via `responseMimeType: "application/json"`.
+- Structured JSON output enforced via `response_format: { type: "json_object" }`.
 - Output validated at runtime using strict Zod schemas (`AIInvestigationResponseSchema`).
-- Simulated local advisory fallback if `GEMINI_API_KEY` is not present, allowing offline development and testing.
+- Simulated local advisory fallback if `GROK_API_KEY` is not present, allowing offline development and testing.
 
 ---
 

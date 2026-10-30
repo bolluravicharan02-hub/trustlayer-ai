@@ -143,10 +143,11 @@ export class PrivacyScannerService {
 
     // 3. API Keys & Secrets (Critical/High)
     if (shouldScan('api_key')) {
-      // Standard OpenAI/Anthropic/Stripe/Gemini/GitHub patterns
+      // Standard xAI/OpenAI/Anthropic/Stripe/Google/GitHub patterns
       const apiKeyPatterns = [
+        { regex: /\b(xai-[a-zA-Z0-9_\-]{30,80})\b/g, conf: 0.99, type: 'xai_grok_key' },
         { regex: /\b(sk-[a-zA-Z0-9_\-]{20,})\b/g, conf: 0.98, type: 'secret_key' },
-        { regex: /\b(AIza[0-9A-Za-z-_]{35})\b/g, conf: 0.99, type: 'gemini_api_key' },
+        { regex: /\b(AIza[0-9A-Za-z-_]{35})\b/g, conf: 0.99, type: 'google_api_key' },
         { regex: /\b(AKIA[0-9A-Z]{16})\b/g, conf: 0.99, type: 'aws_access_key' },
         { regex: /\b(gh[pousr]_[A-Za-z0-9_]{36,})\b/g, conf: 0.99, type: 'github_token' },
         { regex: /\b(xox[baprs]-[0-9]{12}-[0-9]{12}-[a-zA-Z0-9]{24})\b/g, conf: 0.99, type: 'slack_token' },

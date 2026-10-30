@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { testDatabaseConnection } from '../../config/database.js';
-import { isGeminiConfigured } from '../../config/gemini.js';
+import { isGrokConfigured } from '../../config/grok.js';
 import { env } from '../../config/env.js';
 
 export const healthRouter = Router();
@@ -19,7 +19,7 @@ healthRouter.get('/health', (req: Request, res: Response) => {
 
 healthRouter.get('/ready', async (req: Request, res: Response) => {
   const dbConnected = await testDatabaseConnection();
-  const geminiAvailable = isGeminiConfigured();
+  const grokAvailable = isGrokConfigured();
 
   const isReady = dbConnected;
 
@@ -29,11 +29,10 @@ healthRouter.get('/ready', async (req: Request, res: Response) => {
       ready: isReady,
       checks: {
         database: dbConnected ? 'connected' : 'disconnected',
-        gemini: geminiAvailable ? 'configured' : 'fallback_mode',
+        grok: grokAvailable ? 'configured' : 'fallback_mode',
       },
-      model: env.GEMINI_MODEL,
+      model: env.GROK_MODEL,
       timestamp: new Date().toISOString(),
     },
   });
 });
-

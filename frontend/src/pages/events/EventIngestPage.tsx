@@ -64,7 +64,7 @@ export const EventIngestPage: React.FC = () => {
         occurredAt: new Date().toISOString(),
         description: 'Exception: Failed to sync Stripe card 4532-0151-1283-0366 using token sk-9f8a7b6c5d4e3f2a1b0c and contact admin@partner.org',
         payload: {
-          apiKey: 'AIzaSyA_example_gemini_key_1234567890',
+          apiKey: 'xai-9f8a7b6c5d4e3f2a1b0c_example_grok_key_1234567890',
           privateKeyBlock: '-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC3\n-----END PRIVATE KEY-----',
         },
       },

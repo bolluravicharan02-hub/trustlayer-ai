@@ -4,7 +4,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-22_LTS-green.svg)](https://nodejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-336791.svg)](https://www.postgresql.org/)
-[![Google Gemini](https://img.shields.io/badge/Gemini-2.5_Flash-4285F4.svg)](https://ai.google.dev/)
+[![xAI Grok](https://img.shields.io/badge/xAI_Grok-grok--2--latest-black.svg)](https://x.ai/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
@@ -22,7 +22,7 @@ Organizations continuously collect high-velocity application logs, security even
 TrustLayer AI bridges this gap through a deterministic-first architecture:
 - **Security Intelligence**: Evaluates incoming events against mathematically verified deterministic security rules, assigning bounded risk scores from $0$ to $100$.
 - **Privacy Intelligence**: An independent scanner identifies sensitive data (including credit cards verified via the mathematical **Luhn algorithm**, API keys, Bearer tokens, and JWTs) and **redacts them automatically** before storage or model processing.
-- **Explainable AI Trust**: Google Gemini analyzes sanitized event context to explain root causes, plausible alternative hypotheses, and safe remediation steps—clearly distinguishing deterministic findings from probabilistic AI reasoning with mandatory human review.
+- **Explainable AI Trust**: xAI Grok analyzes sanitized event context to explain root causes, plausible alternative hypotheses, and safe remediation steps—clearly distinguishing deterministic findings from probabilistic AI reasoning with mandatory human review.
 - **Cryptographic Auditability**: An append-only audit trail links every action into a **SHA-256 hash chain** protected by database triggers that reject any modification or deletion.
 
 ---
@@ -46,7 +46,7 @@ TrustLayer AI bridges this gap through a deterministic-first architecture:
 - **Database Driver**: `pg` (PostgreSQL Connection Pooling, Supabase SSL)
 - **Authentication**: **Clerk** JWT verification (`@clerk/backend`, `@clerk/express`) with JIT user/tenant provisioning + Argon2id / sessions fallback
 - **CSRF Protection**: Synchronizer-token protection with constant-time verification (`crypto.timingSafeEqual`)
-- **AI Integration**: Official **`@google/genai`** Google Generative AI SDK with structured JSON schemas
+- **AI Integration**: **xAI Grok API** (`grok-2-latest`) with structured JSON schema outputs
 - **Security Middleware**: Helmet, restricted in-memory Multer uploads, atomic rate-limiting
 - **Logging**: Pino with automated field-level credential redaction
 
@@ -82,7 +82,7 @@ trustlayer-ai/
 │
 ├── backend/                      # Node.js + Express + TypeScript Backend
 │   ├── src/
-│   │   ├── config/               # Zod env validation, Database pools, Gemini SDK
+│   │   ├── config/               # Zod env validation, Database pools, xAI Grok API
 │   │   ├── database/             # Tenant transaction wrapper & migration runner
 │   │   ├── middleware/           # Auth, RLS org member check, CSRF, rate limit
 │   │   ├── modules/              # REST routes: auth, events, alerts, privacy, etc.
@@ -124,12 +124,12 @@ trustlayer-ai/
 ### Prerequisites
 - **Node.js**: v22 LTS or newer
 - **PostgreSQL**: v15 or newer (or free cloud PostgreSQL like Neon / Supabase / Replit)
-- **Google Gemini API Key**: Optional for basic rule detection, required for live AI explanations
+- **xAI Grok API Key**: Optional for basic rule detection, required for live AI explanations
 
 ### 1. Clone & Install Dependencies
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/trustlayer-ai.git
+git clone https://github.com/bolluravicharan02-hub/trustlayer-ai.git
 cd trustlayer-ai
 
 # Install backend dependencies
@@ -152,8 +152,8 @@ PORT=5000
 DATABASE_URL=postgresql://postgres:password@localhost:5432/trustlayer
 DATABASE_APP_URL=postgresql://postgres:password@localhost:5432/trustlayer
 SESSION_SECRET=c2VjdXJlLXJhbmRvbS1zZXNzaW9uLXNlY3JldC1mb3ItdHJ1c3RsYXllci1haS0yMDI2LXByb2R1Y3Rpb24=
-GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.5-flash
+GROK_API_KEY=xai-your_grok_api_key_here
+GROK_MODEL=grok-2-latest
 FRONTEND_ORIGINS=http://localhost:5173
 ```
 
@@ -210,7 +210,7 @@ Navigate your browser to `http://localhost:5173`.
    - Navigate to `/app/alerts` and select the newly generated Brute Force alert.
    - Inspect the **Deterministic Rule Evidence** (`failed_attempts_count = 5`, origin IP).
    - Click **"Explain with AI"**.
-   - View the structured Gemini report: Incident Summary, Likely Intent, Observations with confidence scores, Alternative Explanations, and Human-in-the-Loop mitigation recommendations.
+   - View the structured Grok report: Incident Summary, Likely Intent, Observations with confidence scores, Alternative Explanations, and Human-in-the-Loop mitigation recommendations.
    - Change the status to **"Investigating"** and post an investigation note.
 5. **Interactive Privacy Redaction Studio**:
    - Navigate to `/app/privacy/scan`.

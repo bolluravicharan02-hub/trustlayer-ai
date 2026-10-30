@@ -34,11 +34,12 @@ COOKIE_SECURE=true
 COOKIE_SAME_SITE=lax
 TRUST_PROXY=true
 
-# Google Gemini API
-GEMINI_API_KEY=AIzaSy...
-GEMINI_MODEL=gemini-2.5-flash
-GEMINI_TIMEOUT_MS=30000
-GEMINI_MAX_OUTPUT_TOKENS=2048
+# xAI Grok API (From https://console.x.ai)
+GROK_API_KEY=xai-...
+GROK_MODEL=grok-2-latest
+GROK_BASE_URL=https://api.x.ai/v1
+GROK_TIMEOUT_MS=30000
+GROK_MAX_OUTPUT_TOKENS=2048
 
 # Upload & Rate Limits
 MAX_UPLOAD_BYTES=5242880
@@ -86,7 +87,7 @@ NODE_ENV=production npm start
 
 ### Health & Readiness Probes
 - **Liveness Probe**: `GET /api/v1/health` (returns 200 OK)
-- **Readiness Probe**: `GET /api/v1/ready` (verifies PostgreSQL pool connection and Gemini readiness)
+- **Readiness Probe**: `GET /api/v1/ready` (verifies PostgreSQL pool connection and Grok readiness)
 
 ---
 

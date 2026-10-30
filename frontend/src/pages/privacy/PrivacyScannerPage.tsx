@@ -262,7 +262,7 @@ Contact billing supervisor: accounting@enterprise-cloud.io or call 800-555-0199.
             {/* Redacted Sanitized Output */}
             <div className="p-4 rounded-xl bg-slate-950/80 border border-emerald-500/30 space-y-2">
               <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider block">
-                Sanitized Output (Safe for Gemini & Logs)
+                Sanitized Output (Safe for Grok & Logs)
               </span>
               <pre className="p-3 rounded-lg bg-slate-900/90 font-mono text-xs text-emerald-300 overflow-x-auto max-h-56 whitespace-pre-wrap">
                 {redactedOutput}
@@ -323,7 +323,7 @@ Contact billing supervisor: accounting@enterprise-cloud.io or call 800-555-0199.
             <div className="p-6 rounded-2xl bg-slate-950/90 border border-blue-500/30 space-y-4">
               <div className="flex items-center space-x-2.5">
                 <Sparkles className="w-5 h-5 text-cyan-400" />
-                <h3 className="text-sm font-bold text-white">Gemini AI Privacy Governance Advisory</h3>
+                <h3 className="text-sm font-bold text-white">Grok AI Privacy Governance Advisory</h3>
               </div>
               <p className="text-xs text-slate-300 leading-relaxed bg-slate-900 p-3 rounded-xl border border-slate-800">
                 {aiAdvisory.summary}

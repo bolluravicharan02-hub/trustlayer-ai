@@ -30,11 +30,12 @@ const envSchema = z.object({
   COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
   TRUST_PROXY: z.string().transform(v => v === 'true').default('false'),
 
-  // Gemini AI
-  GEMINI_API_KEY: z.string().optional(),
-  GEMINI_MODEL: z.string().default('gemini-2.5-flash'),
-  GEMINI_TIMEOUT_MS: z.coerce.number().default(30000),
-  GEMINI_MAX_OUTPUT_TOKENS: z.coerce.number().default(2048),
+  // xAI Grok AI
+  GROK_API_KEY: z.string().optional().default(() => process.env.GROK_API_KEY || process.env.XAI_API_KEY || process.env.GEMINI_API_KEY || ''),
+  GROK_MODEL: z.string().default('grok-2-latest'),
+  GROK_BASE_URL: z.string().default('https://api.x.ai/v1'),
+  GROK_TIMEOUT_MS: z.coerce.number().default(30000),
+  GROK_MAX_OUTPUT_TOKENS: z.coerce.number().default(2048),
 
   // File Upload Limits
   MAX_UPLOAD_BYTES: z.coerce.number().default(5242880), // 5MB

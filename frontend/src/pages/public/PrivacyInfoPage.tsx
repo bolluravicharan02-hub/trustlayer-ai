@@ -23,7 +23,7 @@ export const PrivacyInfoPage: React.FC = () => {
           How TrustLayer AI Protects Sensitive Data
         </h1>
         <p className="text-base sm:text-lg text-slate-400 leading-relaxed mb-12">
-          TrustLayer AI implements a privacy-first data handling pipeline. Before security events, log messages, or text entries are stored in our PostgreSQL database or analyzed by Google Gemini, they undergo rigorous, automated client-side and server-side sanitization.
+          TrustLayer AI implements a privacy-first data handling pipeline. Before security events, log messages, or text entries are stored in our PostgreSQL database or analyzed by xAI Grok, they undergo rigorous, automated client-side and server-side sanitization.
         </p>
 
         <div className="space-y-8">
@@ -63,7 +63,7 @@ export const PrivacyInfoPage: React.FC = () => {
               Zero-Exposure External AI Boundary
             </h2>
             <p className="text-sm text-slate-400 leading-relaxed">
-              Google Gemini is invoked only on sanitized, minimized payloads. Raw secrets, unredacted passwords, and sensitive credentials are mathematically blocked from being sent across model API boundaries.
+              xAI Grok is invoked only on sanitized, minimized payloads. Raw secrets, unredacted passwords, and sensitive credentials are mathematically blocked from being sent across model API boundaries.
             </p>
           </div>
         </div>

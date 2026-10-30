@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import pg from 'pg';
-import { genAI, isGeminiConfigured } from '../config/gemini.js';
+import { isGrokConfigured } from '../config/grok.js';
 import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 import { RedactionService } from './redaction.service.js';
@@ -8,11 +8,11 @@ import {
   AIInvestigationResponseSchema,
   AIPrivacyResponseSchema,
   AIPolicyResponseSchema,
-  AITrustExplanationSchema
+  AITrustExplanationSchema,
 } from '../schemas/index.js';
 
 export const SYSTEM_PROMPT = `
-You are TrustLayer AI, a security and privacy analysis assistant.
+You are TrustLayer AI, a security and privacy analysis assistant powered by Grok.
 
 Your responsibility is to help authorized organizational security teams
 understand sanitized security events, identify possible suspicious behavior,
@@ -50,7 +50,7 @@ Never include markdown fences (\`\`\`json) or additional conversational prose ou
 
 export class AIInvestigationService {
   /**
-   * Performs an AI-assisted security investigation on an alert
+   * Performs an AI-assisted security investigation on an alert using xAI Grok
    */
   public static async investigateAlert(
     client: pg.PoolClient,
@@ -80,7 +80,7 @@ export class AIInvestigationService {
   ) {
     const startTime = Date.now();
     const promptVersion = '1.0.0-alert-investigation';
-    const modelName = env.GEMINI_MODEL;
+    const modelName = env.GROK_MODEL;
 
     // Sanitize context thoroughly before feeding to AI
     const sanitizedContext = {
@@ -93,14 +93,16 @@ export class AIInvestigationService {
         ruleCode: params.alert.ruleCode,
         deterministicEvidence: params.alert.evidence,
       },
-      event: params.event ? {
-        eventType: params.event.eventType,
-        source: params.event.source,
-        actor: params.event.actorIdentifier || 'unknown',
-        sourceIp: params.event.sourceIp || 'unknown',
-        occurredAt: params.event.occurredAt,
-        payload: RedactionService.redactObject(params.event.sanitizedPayload),
-      } : null,
+      event: params.event
+        ? {
+            eventType: params.event.eventType,
+            source: params.event.source,
+            actor: params.event.actorIdentifier || 'unknown',
+            sourceIp: params.event.sourceIp || 'unknown',
+            occurredAt: params.event.occurredAt,
+            payload: RedactionService.redactObject(params.event.sanitizedPayload),
+          }
+        : null,
     };
 
     const contextStr = JSON.stringify(sanitizedContext);
@@ -129,11 +131,8 @@ export class AIInvestigationService {
     try {
       let outputData: unknown;
 
-      if (isGeminiConfigured() && genAI) {
-        const prompt = `
-${SYSTEM_PROMPT}
-
-Investigate the following security alert.
+      if (isGrokConfigured()) {
+        const prompt = `Investigate the following security alert.
 Explain what happened using only the supplied sanitized evidence.
 
 SANITIZED EVIDENCE TO ANALYZE:
@@ -162,26 +161,50 @@ Return a JSON object conforming exactly to this structure:
   "missing_context": [ string ],
   "requires_human_review": boolean,
   "limitations": [ string ]
-}
-`;
+}`;
 
-        const response = await genAI.models.generateContent({
-          model: modelName,
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-            temperature: 0.2,
-          },
-        });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), env.GROK_TIMEOUT_MS);
 
-        const rawText = response.text?.trim() || '';
-        const parsed = JSON.parse(rawText);
-        outputData = AIInvestigationResponseSchema.parse(parsed);
+        try {
+          const response = await fetch(`${env.GROK_BASE_URL}/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${env.GROK_API_KEY}`,
+            },
+            body: JSON.stringify({
+              model: modelName,
+              messages: [
+                { role: 'system', content: SYSTEM_PROMPT },
+                { role: 'user', content: prompt },
+              ],
+              response_format: { type: 'json_object' },
+              temperature: 0.2,
+              max_tokens: env.GROK_MAX_OUTPUT_TOKENS,
+            }),
+            signal: controller.signal,
+          });
+
+          if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`xAI Grok API returned HTTP ${response.status}: ${errText}`);
+          }
+
+          const responseData = (await response.json()) as any;
+          const rawText = responseData.choices?.[0]?.message?.content?.trim() || '{}';
+          const cleanJson = rawText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+          const parsed = JSON.parse(cleanJson);
+          outputData = AIInvestigationResponseSchema.parse(parsed);
+        } finally {
+          clearTimeout(timeout);
+        }
       } else {
-        // Fallback explanation when GEMINI_API_KEY is not configured
+        // Fallback explanation when GROK_API_KEY is not configured
         outputData = {
           summary: `Automated investigation for alert: ${params.alert.title}. Observed deterministic security alert triggered under rule ${params.alert.ruleCode}.`,
-          likely_intent: params.alert.severity === 'critical' || params.alert.severity === 'high' ? 'suspicious' : 'unknown',
+          likely_intent:
+            params.alert.severity === 'critical' || params.alert.severity === 'high' ? 'suspicious' : 'unknown',
           observations: [
             {
               description: `Triggered deterministic detection rule '${params.alert.ruleCode}' with risk score ${params.alert.riskScore}/100.`,
@@ -190,7 +213,9 @@ Return a JSON object conforming exactly to this structure:
             },
             {
               description: 'Telemetry verification based on ingested log structure.',
-              evidence: params.event ? `Event source: ${params.event.source}, actor: ${params.event.actorIdentifier || 'system'}` : 'Event log linked',
+              evidence: params.event
+                ? `Event source: ${params.event.source}, actor: ${params.event.actorIdentifier || 'system'}`
+                : 'Event log linked',
               confidence: 0.85,
             },
           ],
@@ -219,7 +244,7 @@ Return a JSON object conforming exactly to this structure:
           ],
           requires_human_review: true,
           limitations: [
-            'Generated by local rule-based advisory engine (Configure GEMINI_API_KEY for live generative analysis).',
+            'Generated by local rule-based advisory engine (Configure GROK_API_KEY for live generative analysis).',
             'AI hypotheses are probabilistic and must never replace human security verification.',
           ],
         };
@@ -240,7 +265,7 @@ Return a JSON object conforming exactly to this structure:
         status: 'completed',
         latencyMs,
         modelName,
-        isSimulated: !isGeminiConfigured(),
+        isSimulated: !isGrokConfigured(),
         output: outputData,
       };
     } catch (err: unknown) {
@@ -262,7 +287,9 @@ Return a JSON object conforming exactly to this structure:
   /**
    * Generates an AI-assisted explanation of detected privacy risks
    */
-  public static async explainPrivacyRisks(findings: Array<{ category: string; safePreview: string; detectionMethod: string }>) {
+  public static async explainPrivacyRisks(
+    findings: Array<{ category: string; safePreview: string; detectionMethod: string }>
+  ) {
     if (findings.length === 0) {
       return {
         summary: 'No sensitive data categories were detected in the supplied content.',
@@ -274,12 +301,14 @@ Return a JSON object conforming exactly to this structure:
       };
     }
 
-    const categories = Array.from(new Set(findings.map(f => f.category)));
+    const categories = Array.from(new Set(findings.map((f) => f.category)));
 
     return {
       summary: `Detected ${findings.length} sensitive item(s) across categories: ${categories.join(', ')}.`,
-      overall_risk: categories.some(c => ['private_key', 'api_key', 'payment_card', 'jwt'].includes(c)) ? 'critical' : 'medium',
-      findings: categories.map(cat => ({
+      overall_risk: categories.some((c) => ['private_key', 'api_key', 'payment_card', 'jwt'].includes(c))
+        ? 'critical'
+        : 'medium',
+      findings: categories.map((cat) => ({
         category: cat,
         risk_explanation: `Exposure of ${cat} records poses security or privacy compliance exposure.`,
         recommended_protection: `Apply automated redaction before exporting or sending to third-party AI systems.`,
@@ -295,4 +324,3 @@ Return a JSON object conforming exactly to this structure:
     };
   }
 }
-

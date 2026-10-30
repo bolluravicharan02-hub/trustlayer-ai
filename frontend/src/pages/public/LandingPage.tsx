@@ -69,7 +69,7 @@ export const LandingPage: React.FC = () => {
           </h1>
 
           <p className="text-lg sm:text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed mb-10">
-            TrustLayer AI combines deterministic security detection, automated sensitive data redaction, and explainable Google Gemini reasoning into a single verifiable SaaS architecture.
+            TrustLayer AI combines deterministic security detection, automated sensitive data redaction, and explainable xAI Grok reasoning into a single verifiable SaaS architecture.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
@@ -139,7 +139,7 @@ export const LandingPage: React.FC = () => {
               </div>
               <h2 className="text-lg font-bold text-white mb-2">Explainable AI & Trust Center</h2>
               <p className="text-sm text-slate-400 leading-relaxed mb-4">
-                Google Gemini synthesizes incident context into structured explanations while transparently separating deterministic facts from AI hypotheses. Human approval is strictly enforced for consequential actions.
+                xAI Grok synthesizes incident context into structured explanations while transparently separating deterministic facts from AI hypotheses. Human approval is strictly enforced for consequential actions.
               </p>
               <ul className="space-y-2 text-xs text-slate-300 font-medium">
                 <li className="flex items-center gap-2">
@@ -159,7 +159,7 @@ export const LandingPage: React.FC = () => {
       {/* Footer */}
       <footer className="border-t border-slate-800/80 py-8 px-8 bg-slate-950/80 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
-          © 2026 TrustLayer AI Platform. All rights reserved. Built with Google Gemini, Node.js 22, and PostgreSQL RLS.
+          © 2026 TrustLayer AI Platform. All rights reserved. Built with xAI Grok, Node.js 22, and PostgreSQL RLS.
         </div>
         <div className="flex items-center space-x-6">
           <Link to="/privacy" className="hover:text-slate-300 transition">Privacy Practice</Link>

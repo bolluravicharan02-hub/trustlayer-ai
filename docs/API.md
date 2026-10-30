@@ -109,7 +109,7 @@ Updates incident status (`open`, `acknowledged`, `investigating`, `resolved`, `f
 Adds an investigation note or collaborative comment.
 
 ### `POST /alerts/:id/analyze`
-Invokes the **Google Gemini Copilot** to produce explainable root-cause analysis, alternative explanations, confidence scores, and recommended actions.
+Invokes the **xAI Grok Copilot** to produce explainable root-cause analysis, alternative explanations, confidence scores, and recommended actions.
 
 ---
 
