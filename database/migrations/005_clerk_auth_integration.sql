@@ -10,3 +10,4 @@ ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
 
 -- Index for rapid lookups on Clerk user ID
 CREATE INDEX IF NOT EXISTS idx_users_clerk_user_id ON users(clerk_user_id) WHERE clerk_user_id IS NOT NULL;
+

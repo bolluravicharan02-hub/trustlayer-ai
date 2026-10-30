@@ -67,3 +67,4 @@ export const AppAuthProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   return <AuthProvider>{children}</AuthProvider>;
 };
+
